@@ -326,7 +326,7 @@ clo_952<- quantile(V(conflict_w2)$clo, probs = 0.95)
 set.seed(431)
 llayout <- layout_nicely(spendtime_w1)
 library(scales)
-#Plot two waves of spendtime - look at plotting examples in the homework to see if there are better ideas for this
+#Plot two waves of spendtime
 
 par(mar = c(1,1,4,1))
 par(mfrow=c(1,2)) 
@@ -370,7 +370,7 @@ legend("topright",
 
 ```{r CONFLICT}
 set.seed(431)
-#Plot two waves of spendtime - look at plotting examples in the homework to see if there are better ideas for this
+#Plot two waves of spendtime
 
 par(mar = c(1,1,4,1))
 par(mfrow=c(1,2)) 
@@ -627,7 +627,7 @@ compare(membership(conflict2_clust), V(conflict_w2_nogaps)$Age, method = "nmi")
 ```
 
 
-Question 4 - maybe update this slightly as this is pretty much exactly from the homework
+Question 4
 ```{r Question 4}
 require(igraph)
 library("intergraph")
