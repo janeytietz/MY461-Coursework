@@ -1,0 +1,267 @@
+---
+title: "PS Week 5"
+author: 'Janey Tietz'
+date: "2024-02-25"
+output: html_document
+---
+```{r Analysis pre-work, calculations}
+#Set your working directory to the location on your machine where the four source files are saved - remove # for line 11 and run the script,
+#Install the required packages by removing the # if needed for line 13
+
+#setwd(//insert your own WD//)
+
+#install.packages(c("igraph","scales"))
+
+library(igraph)
+library(scales)
+
+#Including script from problem set instructions below
+meta <- read.csv("meta eurovision file", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+euro_5pub <- read.csv("eurovision public votes", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+euro_5jury <- read.csv("eurovision jury votes", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+
+net_5pub <- graph_from_data_frame(euro_5pub, directed = TRUE)
+net_5jury <- graph_from_data_frame(euro_5jury, directed = TRUE)
+
+## creating a new dataframe to which we can append the metadata, 
+## appropriately aligned with the order of the nodes in the networks
+last5_df <- data.frame(Country = V(net_5pub)$name) 
+last5_df <- merge(last5_df, meta, by = "Country", sort = FALSE)
+
+## again creating the networks, 
+## this time adding all node attributes through the "vertices" element 
+net_5pub <- graph_from_data_frame(euro_5pub, vertices = last5_df)
+net_5jury <- graph_from_data_frame(euro_5jury, vertices = last5_df)
+
+## as above, now for the 1957-2023 jury network
+euro_alljury <- read.csv("erovision sum of jury points", header = TRUE, as.is = TRUE, stringsAsFactors = FALSE)
+net_alljury <- graph_from_data_frame(euro_alljury)
+alljury_df <- data.frame(Country = V(net_alljury)$name)
+alljury_df <- merge(alljury_df, meta, by = "Country", sort = FALSE)
+net_alljury <- graph_from_data_frame(euro_alljury, vertices = alljury_df)
+
+## Creating colour field for outward edge and vertex Region with all tables
+col_region <- data.frame(Region = unique(meta$Region), stringsAsFactors = T)
+col_region$col <- brewer_pal(palette = "Set2")(5)
+
+V(net_5pub)$col <- col_region$col[match(V(net_5pub)$Region, col_region$Region)]
+E(net_5pub)$col <- col_region$col[match(tail_of(net_5pub,E(net_5pub))$Region, col_region$Region)]
+V(net_5jury)$col <- col_region$col[match(V(net_5jury)$Region, col_region$Region)]
+E(net_5jury)$col <- col_region$col[match(tail_of(net_5jury,E(net_5jury))$Region, col_region$Region)]
+V(net_alljury)$col <- col_region$col[match(V(net_alljury)$Region, col_region$Region)]
+E(net_alljury)$col <- col_region$col[match(tail_of(net_alljury,E(net_alljury))$Region, col_region$Region)]
+```
+##1) Plot the three networks. Size edges based on the “Count” variable for the 2018-2023 networks (net_5pub, net_5jury) and the “Sum” variable for the 1957-2023 network (net_alljury). Size nodes by in-strength centrality (using strength(), and using the “Count” or “Sum” edge attribute as your edge weight). Colour nodes using the Region variable. Position nodes based on the latitude and longitude of their capital cities (using layout = as.matrix(cbind(V(your_network)$capital.lon, V(your_network)$capital.lat)) when plotting). Make sure your plots are legible and informative. [1 point]
+
+I am using ISO Alpha3 code as the vertex label and have curved the edges across the plots in an attempt to avoid overlapping as much as possible across nodes with close capitals (i.e. Finland and Estonia).
+```{r Plotting Public vote 2018-2023}
+#Plot for the number of times the public in one country voted for another country as their top song from 2018 to 2023
+
+plot(net_5pub,
+     vertex.label = V(net_5pub)$ISO.alpha3.code,
+     vertex.color = V(net_5pub)$col, #col as region fields in above section
+     vertex.size =  rescale(strength(net_5pub, mode = "in", weights = E(net_5pub)$Count), c(6,15)),
+     vertex.label.font = 2,
+     vertex.label.cex= ifelse(strength(net_5pub, mode = "in", weights = E(net_5pub)$Count)>5, 0.7, 0.5),
+     edge.width = rescale(E(net_5pub)$Count,c(0.7,4)),
+     edge.arrow.size = 0.15,
+     edge.curved = 0.5,
+     edge.color = E(net_5pub)$col,
+     layout = as.matrix(cbind(V(net_5pub)$capital.lon, V(net_5pub)$capital.lat)),
+     main = "Public Popular Vote for Top Song from 2018 to 2023, Coloured by Region")
+
+legend("topright", 
+       legend = c("Southern Europe","Western Asia","Western Europe","Eastern Europe","Northern Europe"),
+       col = col_region$col,
+       pch = 19,
+       pt.cex = 2,
+       seg.len = 2,
+       title = "Region")
+```
+```{r Plotting Jury vote 2018-2023}
+#Plot for the number of times the jury in one country selected another country as their top song in the last 5 years
+
+plot(net_5jury,
+     vertex.label = V(net_5jury)$ISO.alpha3.code,
+     vertex.color = V(net_5jury)$col,
+     vertex.size =  rescale(strength(net_5jury, mode = "in", weights = E(net_5jury)$Count),c(4,15)),
+     vertex.label.cex= ifelse(strength(net_5jury, mode = "in", weights = E(net_5jury)$Count)>8, 0.7, 0.5),
+     vertex.label.font = 2,
+     edge.width = rescale(E(net_5jury)$Count,c(0.7,4)),
+     edge.arrow.size = 0.1,
+     edge.curved =0.5,
+     edge.color = E(net_5jury)$col,
+     layout = as.matrix(cbind(V(net_5jury)$capital.lon, V(net_5jury)$capital.lat)),
+     main = "Jury Vote Top Song from 2018 to 2023, Coloured by Region")
+
+legend("topright", 
+       legend = c("Southern Europe","Western Asia","Western Europe","Eastern Europe","Northern Europe"),
+       col = col_region$col,
+       pch = 19,
+       pt.cex = 2,
+       seg.len = 2,
+       title = "Region")
+```
+```{r Plotting Sum of all Jury votes}
+#Plot for the sum of points the jury in one country has awarded another country since 1957 (excluding 2020 as there was no competition)
+
+plot(net_alljury,
+     vertex.label = V(net_alljury)$ISO.alpha3.code,
+     vertex.color = V(net_alljury)$col,
+     vertex.size =  rescale(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum),c(3,20)),
+     vertex.label.cex= ifelse(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum)>1456.5, 0.7, 0.5),
+     vertex.label.font = 2,
+     edge.width = rescale(E(net_alljury)$Sum/66, 0.5, 5),
+     edge.arrow.size = rescale(E(net_alljury)$Sum/66, 0.2, 0.4),
+     edge.curved = 0.5,
+     edge.color = E(net_alljury)$col,
+     layout = as.matrix(cbind(V(net_alljury)$capital.lon, V(net_alljury)$capital.lat)),
+     main = "Sum of Jury Points Awarded from 1957 to Present Coloured by Region")
+
+legend("topright", 
+       legend = c("Southern Europe","Western Asia","Western Europe","Eastern Europe","Northern Europe"),
+       col = col_region$col,
+       pch = 19,
+       pt.cex = 2,
+       seg.len = 2,
+       title = "Region")
+```
+##2) Calculate reciprocity, (global) transitivity, and assortativity by Region for the 2018-2023 popular and jury networks (net_5pub and net_5jury). Report the values in prose to show your understanding of each measure. How do the two networks compare? What do these measures suggest about voting patterns in Eurovision? What might these measures be missing or misrepresenting, either on the basis of how the calculations were done, or how the networks were constructed? Why are we not asking you to do this for the 1957-2023 jury network (net_alljury)? [4 points]
+```{r Calculating public popular vote reciprocity 2018-2023}
+recip_pub <-reciprocity(net_5pub)
+recip_pub
+```
+If Country A's public has voted Country B for top song (at least once) in the last 5 years, there is about a 23% chance that Country B's public will have voted Country A for best song (at least once) in the last 5 years, as 23% of edges are reciprocated.
+```{r Calculating public vote global transitivity 2018-2023}
+transit_pub <-transitivity(net_5pub)
+transit_pub
+```
+If the public votes for best song in Country A and Country B have both gone to Country C (at least once) in the last 5 years, there is about a 30% chance that either Country A or Country B's public will have voted for one another for best song (at least once) in the last 5 years. ~30% of the connected triads in this public votes network are closed triads.
+```{r Calculating public vote assortativity 2018-2023}
+assort_pub <-assortativity.nominal(net_5pub, factor(V(net_5pub)$Region))
+assort_pub
+```
+As this value indicates that the network is moderately assortative (evidence of homophily), we can say that in the last five years, countries within the same region are more likely to have had their public vote at least once for (or received the popular public vote at least once from) other countries within their region than outside it. A country's public popular vote for best song is therefore less likely to go a country outside of their region in this period.
+```{r Calculating jury vote reciprocity 2018-2023}
+recip_jury <- reciprocity(net_5jury)
+recip_jury
+```
+If Country A's jury has voted Country B for top song (at least once) in the last 5 years, there is about an 18% chance that Country B's jury will have voted Country A for best song (at least once) in the last 5 years, as ~18% of edges are reciprocated.
+```{r Calculating jury vote global transitivity 2018-2023}
+transit_jury <- transitivity(net_5jury)
+transit_jury
+```
+If the jury votes for best song in Country A and Country B have both gone to Country C (at least once) in the last 5 years, there is about a 19% chance that either Country A or Country B's jury will have voted for one another for best song (at least once) in the last 5 years. ~19% of the connected triads in this jury votes network are closed triads.
+```{r Calculating jury vote assortativity by region 2018-2023}
+assort_jury <-assortativity.nominal(net_5jury, factor(V(net_5jury)$Region))
+assort_jury
+```
+As this value indicates that the network is not very assortative (not very much bigger than 0 and no clear evidence of homophily), we can say that in the last five years, countries within the same region are not much more likely to have had their juries vote for (or received the popular public vote from) other countries within their region than outside it. A country's jury vote for best song is therefore not much less likely to go to a country outside of their region.
+
+#How do the networks compare?
+The jury votes for best song over the last five years have a lower reciprocity, global transitivity, and assortativity by region than the public votes for best song over the same period. This indicates that public popular votes are more likely to be recipricated, transitive, and assortative by region (and therefore more densely connected by region) than their jury's votes in the last five years. 
+
+#What do the measures suggest about voting patterns in Eurovision?
+Due to our datasets only involving best song votes within the last five years, we can only comment on relationship dynamic patterns for best song rather than overall voting patterns for this period.
+
+These measures suggest that public popular voting and jury voting follow different strategies / relationship dynamic patterns. It seems that public popular voting is not done by random and is related to the country's region and voting behaviour of other countries, as it seems that voting patterns by the public are more grouped than jury votes, more recipricated, transitive, and assorted by region. Their higher reciprocity measure (23%) could indicate that the the public is more likely to vote for another country that has voted for their country for best song in the last five years, whether this is due to existing close ties between countries, vote swapping, or other voter strategy (Stockemer et al, 2017). They are also more likely to vote for other countries within their region (assortativity) and if another country they have voted for has also voted for the other country (transitivity). These measures could indicate how each the public's identity in each country's aligns with other countries, especially those in their own region. 
+
+For the jury, their lower values across these measures could be that there is a desire to appear impartial and not as tied to their region (assortativity), past voting behaviour towards them (reciprocity) or the voting of other countries that they have voted for (transitivity). Instead, behaving in a more perceived "random" manner.
+
+#What might these measures be missing or misrepresenting, either on the basis of how the calculations were done, or how the networks were constructed?
+One potentially misleading factor is that the number of countries within each region is not equal, so metrics analysed at the Regional level will need to consider that Southern Europe has much more countries (16) than Western Asia (6) in this set in our interpretation. This is particularly relevant for assortativity by region, as this imbalance will not be considered in the calculation (Karimi & Oliviera, 2023).
+
+Another aspect that may be missing, as these network edges are unique per paring (one edge for all times Country A voted for Country B), and the assortativity, transitivity, and reciprocity calculations are not weighted by the number of votes (just the existence of the tie), the weighting of the strength/relative power dynamics are not captured within these metrics. This aspect of the network will produce different, most likely lower, values than if there were and edge for every vote, as the network would be denser.
+
+Weighted reciprocity, transitivity, or assortativity parings could be different than the global level as some combinations have been voted more than once (Jury ex. Croatia awarded best song to Italy 3 times in the last 5 years. Public vote ex.  Greece awarded best song to Cyprus 4 times in the last 5 years with Cyrus reciprocating twice) and the current calculations would only be weighting these calculations as 1 instead of 1 for each vote.
+
+The current method captures the general concept of whether the relationship exists or not, which is needed for our calculations of these global measures. Additionally, while these values are true for the whole network if considering any tie exists, the local values will differ, so these measures should not be used to represent relationships for specific groups.
+
+We could instead consider creating local weighted versions of each metrics that would consider the count of these votes to better understand these relationships (Sabek & Pigorsch, 2023; Squartini et al., 2013; McAssey & Bijma, 2015).
+
+#Why are we not asking you to do this for the 1957-2023 jury network (net_alljury)? 
+As we have 66 years of Eurovision votes in this dataset, there will have been many opportunities for countries to vote for each other over time. Due to the sheer number of opportunities to vote for another country, having awarded another country at least one point in this period is not as meaningful and is increasingly likely as time goes on. 
+
+Reciprocity and global transitivity and likely to be quite high regardless (and assortivity by Region to be low and negative) of additional relationship dynamics. Looking at distribution of votes may tell us something about ties, but as relationships have varied over time, it is more meaningful to look at transitivity, reciprocity, and assortativity at individual time periods to understand the relationship dynamics, including over time.
+```{r Validating net_alljury metrics}
+reciprocity(net_alljury)
+transitivity(net_alljury)
+assortativity.nominal(net_alljury, factor(V(net_alljury)$Region))
+#Confirmed these values are retrospectively very high, very high, and negative
+```
+Additionally, the 1957-2023 jury network is the total number of points awarded over the period, which is meaningful, however this does not indicate if a country awarded another country as their top song in this period as we were observing in the last exercise (i.e. 24 points could indicate may combinations - from best song awarded twice and no other points or 1 point for 24 years).  A larger value would still indicate more points given, but the context for interpretation is less clear when aggregated in this fashion.
+
+This shows that there are some potential limitations when using these metrics to investigate relationship dynamics depending on the data set. Approaches such as community detection may additionally help identify relationships that are not as clear through other methods in this case for all jury votes.
+
+##3) Determine community membership in the 1957-2023 network (net_alljury) using the spinglass community detection algorithm, making sure to use the Sum attribute as an edge weight in the calculation. (To ensure that we all can get equivalent results, we need to effectively align our randomness. So, please include (and run) the line set.seed(4321) either at the start of your submission or just before you use the cluster_spinglass() function). Plot the network as done for Question 1 with nodes positioned by latitude and longitude of their capital city, but now with nodes coloured by their community membership. [2 points]
+```{r Generating and plotting spinglass membership for all jury votes}
+set.seed(4321) # Setting seed for spinglass communities
+sg <- cluster_spinglass(net_alljury, weights = E(net_alljury)$Sum)
+
+V(net_alljury)$col <- ifelse(sg$membership == 1,"#a6611a", ifelse(sg$membership == 2,"#67a9cf","#1a9850"))
+sg_mark_col <- c(rgb(0.9,0.7,0.4,0.4),rgb(0.047,0.17,1,0.1),rgb(0.85,0.94,0.63,0.6))
+
+plot(sg, net_alljury,
+     vertex.size =  rescale(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum),c(3,20)),
+     vertex.label.cex= ifelse(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum)>1456.5, 0.7, 0.5),
+     vertex.label = V(net_alljury)$ISO.alpha3.code,
+     vertex.label.color = "white",
+     vertex.label.font = 2,
+     col = V(net_alljury)$col,
+     edge.width = 0.2,
+     edge.arrow.size = 0.1,
+     mark.col = sg_mark_col,
+     mark.border = "black",
+     layout = as.matrix(cbind(V(net_alljury)$capital.lon, V(net_alljury)$capital.lat)),
+     main = "Eurovision Jury Voting from 1957 to Present, Coloured by Spinglass Membership Group")
+
+legend("topright", 
+       legend = c("1", "2", "3"),
+       col = c("#a6611a", "#67a9cf","#1a9850"),
+       pch = 16,
+       pt.cex = 2,
+       seg.len = 2,
+       title = "Spinglass Group",
+       title.cex = 0.8)
+```
+#4) Discuss the results of your analyses, with particular attention to the spinglass community memberships. Overall, how do you make sense of the communities we find? What might explain the groupings? Make sure to compare the spinglass community memberships with the Region attribute. Do they seem to align? What does all of this suggest about Eurovision and Europe? [3 points]
+The spinglass algorithm creates a network map using a "zero-temperature K-Potts model with nearest-neighbor interactions", optimising the vertex energy function (Hoffman et al., 2019). The algorithm considers the weighted sum of edges - including internal edges, internal nonedges, external edges, and external nonedges. The resulting communities have the most similar outputs of this algorithm. 
+#How do you make sense of the communities we find? What might explain the groupings?
+For our purposes, the spinglass algorithm returns 3 communities, with each group maximimising their internal edges and external nonedges and minimising their internal nonedges and external edges. Group 3 is the smallest and seems to have the most external nonedges - particularly those that are voting for them (indicating that they may have low reciprocity); Group 2 and Group 1 appear to be quite similar with a high number of internal edges and medium number of external nonedges, with Group 2 countries aligning more with Western Europe and Northern Europe and Group 1 countries aligning more with Southern Europe, Eastern Europe, and Western Asia. We can see that these groupings seem to also align very closely to proximity of countries to one another, regardless of region - with groups being composed of neighboring countries.
+#Make sure to compare the spinglass community memberships with the Region attribute. Do they seem to align?
+```{r}
+compare(V(net_alljury)$Region,sg, method = "nmi")
+```
+While the spinglass membership and region fields are not approximately equivalent...
+```{r}
+table(V(net_alljury)$Region, membership(sg))
+```
+membership groups do seem to roughly align for some of the regions - particularly Western Europe (which all get grouped in Group 2) and Eastern Europe (which all but one get grouped into Group 1). The majority of countries in each region do get grouped into the same membergroup, potentially indicating higher assortativity within the regions that are grouped together as they could have a high amount of internal edges. However, we should consider that assortativity by region for larger regions is more likely to be larger as there is a larger number of potential countries to vote for and still be within the same region.
+
+Most importantly, the groups seem to not be bound by region, but are aligned due to country proximity outside of these definitions.
+
+#What does all of this suggest about Eurovision and Europe?
+Based on our spinglass groups, we find the suggestion that there is a geographical grouping based on voting behaviour which we can look at through region groupings of (1)Northern and Western Europe, (2) Eastern Europe, Southern Europe and Western Asia, with (1) Western Europe and Northern Europe identifying / voting most similarly based on this analysis. However, we can also see through this analysis that voting behaviour similarities are not bound by these regional definitions, and instead are most similar to to countries that are in closest proximity.
+
+Through our analysis, we see a relationship between European identity and Eurovision voting behaviour, with increasing geographical distance being associated with decreased Eurovision voting similarity. We can consider that European identity and cultural similarity/ties as potential mechanisms, aligning most strongly with proximity and therefore closer geographical countries. This suggests that European identity (and therefore Eurovision voting behaviour) is based on geographical distance, which could be due to the highlighted mechanisms, not solely based on aligned region (though this captures part of this relationship). We could consider looking at our earlier measures based on geographical distance to confirm this hypothesis. This is similar to the findings of Spierdijk and Vellekoop in their 2009 paper on Eurovision voting.
+
+Though analysis considering regional attributes / geographical proximity is a good start, without more information on other contextual factors (such as quality of song, migration, cultural similarities, language spoken, political/ global contexts and power dynamics), we cannot conclude that at least some of the geographical density is related to other dynamics or factors, as suggested by other work in this area (Ginsburgh & Noury, 2008; Spierdijk & Vellekoop, 2009).
+
+Additionally, it is important to note that if we used other community algorithms, such as walktrap, we would get different groupings. I have included a walktrap community plot in the appendix, where we see only 2 communities, which seem to also align geographically by an east west divide and support our hypothesis on the importance of geographical location.
+
+Through the analysis in this problem set, we can see that through Eurovision voting patterns across the last five years and since 1957, we can observe interesting cultural relationship dynamics that appear related to region and geographical distance using assortativity, reciprocity, and transitivity metrics, and community detection algorithms.
+
+```{r Appendix - Creating additional community groupings to check geography alignment}
+wt <- walktrap.community(net_alljury, weights = E(net_alljury)$Sum)
+
+plot(wt, net_alljury,
+     vertex.size =  rescale(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum),c(3,20)),
+     vertex.label.cex= ifelse(strength(net_alljury, mode = "in", weights = E(net_alljury)$Sum)>1456.5, 0.7, 0.5),
+     vertex.label = V(net_alljury)$ISO.alpha3.code,
+     vertex.label.font = 2,
+     edge.width = 0.2,
+     edge.arrow.size = 0.1,
+     mark.border = "black",
+     layout = as.matrix(cbind(V(net_alljury)$capital.lon, V(net_alljury)$capital.lat)),
+     main = "Walktrap Communities Eurovision Jury Voting from 1957 to Present, Coloured by Membership Group")
+```

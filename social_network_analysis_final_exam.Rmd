@@ -1,0 +1,840 @@
+---
+title: "MY461 Final Exam"
+author: 'Janey Tietz'
+date: "2024-04-26"
+output: html_document
+---
+Set up
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Prep data
+```{r }
+library("igraph")
+library("texreg")
+library("scales")
+
+load("insert file path")
+
+#Intersection of networks
+spendtime_conflict_w1 <- intersection(spendtime_w1, conflict_w1)
+conflict_bf_w1 <- intersection(conflict_w1, bestfriend_w1)
+spendtime_w12 <- intersection(spendtime_w1,spendtime_w2)
+bestfriend_w12 <- intersection(bestfriend_w1,bestfriend_w2)
+conflict_w12 <- intersection(conflict_w1,conflict_w2)
+```
+
+Question 1
+```{r}
+require("igraph")
+summary(conflict_w1)
+ecount(conflict_w1)
+transitivity(conflict_w1)
+vcount(conflict_w1)
+#mean(degree(conflict_w1))
+#graph.density(egonet)
+#diameter(egonet)
+
+igraph::degree
+i_deg <- function(graph) {igraph::degree(graph, mode = "in")}
+o_deg <- function(graph) {igraph::degree(graph, mode = "out")}
+deg <- function(graph) {igraph::degree(graph)}
+density <- function(graph) {edge_density(graph)}
+
+
+trans <- function(graph){transitivity(graph)}
+recip <- function(graph){reciprocity(graph)}
+apl <- function(graph) {mean_distance(graph)}
+
+#Spend time w2 metrics
+i_deg_time2 <- i_deg(spendtime_w2)
+i_deg_time1<- i_deg(spendtime_w1)
+o_deg_time2 <- o_deg(spendtime_w2)
+deg_time2 <- deg(spendtime_w2) 
+mean_deg_time2 <- mean(deg_time2)
+trans_time2 <- trans(spendtime_w2)
+recip_time2 <- recip(spendtime_w2)
+apl_time2 <- apl(spendtime_w2)
+den_time2 <- density(spendtime_w2)
+
+#Best friend w2 metrics
+i_deg_bf <- i_deg(bestfriend_w2)
+o_deg_bf <- o_deg(bestfriend_w2)
+deg_bf <- deg(bestfriend_w2) 
+mean_deg_bf <- mean(deg_bf)
+trans_bf <- trans(bestfriend_w2)
+recip_bf <- recip(bestfriend_w2)
+apl_bf <- apl(bestfriend_w2)
+den_bf <- density(bestfriend_w2)
+
+#Conflict w2 metrics
+i_deg_conf <- i_deg(conflict_w2)
+o_deg_conf <- o_deg(conflict_w2)
+deg_conf <- deg(conflict_w2) 
+mean_deg_conf <- mean(deg_conf)
+trans_conf <- trans(conflict_w2)
+recip_conf <- recip(conflict_w2)
+apl_conf <- apl(conflict_w2)
+den_conf <- density(conflict_w2)
+
+metric_table <- data.frame(c('Spend Time W2', 'Best Friend W2', 'Conflict W2'), 
+                        c(den_time2, den_bf, den_conf), 
+                        c(mean_deg_time2, mean_deg_bf, mean_deg_conf),
+                        c(apl_time2, apl_bf, apl_conf),
+                        c(trans_time2, trans_bf, trans_conf),
+                        c(recip_time2, recip_bf, recip_conf)
+                        )
+colnames(metric_table) <- c('Network Name', 'Density', 'Mean Degree', 'Average Path Length', 'Transitivity', ' Reciprocity')
+metric_table
+```
+
+```{r}
+par(mfrow=c(1,3)) 
+hist(deg_time2)
+hist(deg_bf)
+hist(deg_conf)
+```
+#Random network models
+```{r}
+ran_link_pref_time <- lapply(rep(1,100), function(x)
+  sample_pa(n=vcount(spendtime_w2), m=round(mean(degree(spendtime_w2, mode ='in'))), directed=TRUE, out.pref=TRUE))
+
+ran_link_pref_bf <- lapply(rep(1,100), function(x)
+  sample_pa(n=vcount(bestfriend_w2), round(mean(igraph::degree(bestfriend_w2, mode ='in'))), directed=TRUE, out.pref=TRUE))
+
+ran_link_pref_conf <- lapply(rep(1,100), function(x)
+  sample_pa(n=vcount(conflict_w2), round(mean(igraph::degree(conflict_w2, mode ='in'))), directed=TRUE, out.pref=TRUE))
+
+
+#FOR TIME
+ran_time_dens <- sapply(ran_link_pref_time, density)
+ran_time_deg <- sapply(ran_link_pref_time, igraph::degree)
+ran_time_apl <- sapply(ran_link_pref_time, average.path.length)
+ran_time_trans <- sapply(ran_link_pref_time, transitivity)
+ran_time_recip <- sapply(ran_link_pref_time, reciprocity)
+
+pref_att_model_time <- data.frame(c('Empirical','Random', 'Difference'),
+                                  c(den_time2, mean(ran_time_dens), den_time2-mean(ran_time_dens)),
+                                  c(mean_deg_time2, mean(ran_time_deg), mean_deg_time2-mean(ran_time_deg)),
+                                  c(apl_time2, mean(ran_time_apl),apl_time2-mean(ran_time_apl) ),
+                                  c(trans_time2, mean(ran_time_trans),trans_time2-mean(ran_time_trans)),
+                                  c(recip_time2, mean(ran_time_recip),recip_time2-mean(ran_time_recip)))
+colnames(pref_att_model_time) <- c('Metric','Density', ' Mean Degree', ' Average Path Length', 'Transitivity', 'Reciprocity')
+pref_att_model_time
+```
+```{r}
+#FOR BF
+ran_bf_dens <- sapply(ran_link_pref_bf, density)
+ran_bf_deg <- sapply(ran_link_pref_bf, igraph::degree)
+ran_bf_apl <- sapply(ran_link_pref_bf, average.path.length)
+ran_bf_trans <- sapply(ran_link_pref_bf, transitivity)
+ran_bf_recip <- sapply(ran_link_pref_bf, reciprocity)
+
+pref_att_model_bf <- data.frame(c('Empirical','Random', 'Difference'),
+                                  c(den_bf, mean(ran_bf_dens),round(den_bf-mean(ran_bf_dens),4)),
+                                  c(mean_deg_bf, mean(ran_bf_deg), round(mean_deg_bf-mean(ran_bf_deg),4)),
+                                  c(apl_bf, mean(ran_bf_apl),round(apl_bf-mean(ran_bf_apl),4)),
+                                  c(trans_bf, mean(ran_bf_trans),round(trans_bf-mean(ran_bf_trans),4)),
+                                  c(recip_bf, mean(ran_bf_recip),round(recip_bf-mean(ran_bf_recip),4)))
+colnames(pref_att_model_bf) <- c('Metric','Density', ' Mean Degree', ' Average Path Length', 'Transitivity', 'Reciprocity')
+pref_att_model_bf
+```
+```{r}
+#FOR CONFL
+ran_conf_dens <- sapply(ran_link_pref_conf, density)
+ran_conf_deg <- sapply(ran_link_pref_conf, igraph::degree)
+ran_conf_apl <- sapply(ran_link_pref_conf, mean_distance)
+ran_conf_trans <- sapply(ran_link_pref_conf, transitivity)
+ran_conf_recip <- sapply(ran_link_pref_conf, reciprocity)
+
+pref_att_model_conf <- data.frame(c('Empirical','Random', 'Difference'),
+                                c(den_conf, mean(ran_conf_dens),round(den_conf-mean(ran_conf_dens),4)),
+                                c(mean_deg_conf, mean(ran_conf_deg),round(mean_deg_conf-mean(ran_conf_deg),4)),
+                                c(apl_conf, mean(ran_conf_apl),round(apl_conf-mean(ran_conf_apl),4)),
+                                c(trans_conf, mean(ran_conf_trans),round(trans_conf-mean(ran_conf_trans),4)),
+                                c(recip_conf, mean(ran_conf_recip),round(recip_conf-mean(ran_conf_recip),4)))
+colnames(pref_att_model_conf) <- c('Metric','Density', ' Mean Degree', ' Average Path Length', 'Transitivity', 'Reciprocity')
+pref_att_model_conf
+```
+```{r}
+#Plot in and out degree distributions of the three empirical networks
+
+## Define function to get create CCDF
+get_ccdf <- function(graph, mode){
+  d <- igraph::degree(graph, mode=mode)
+  prob <- degree_distribution(graph, mode=mode)
+  prob <- prob[-1] 
+  nonzero_pos <- which(prob!=0)
+  prob <- prob[nonzero_pos]
+  degree <- 1:max(d)
+  degree <- degree[nonzero_pos]
+  ccdf <- NULL
+  
+  for (i in 1:length(prob)) {
+    ccdf[i] = sum(prob[seq(i, length(prob)) ] )
+  }
+  output <- list(ccdf=ccdf, degree=degree)
+  return(output)
+}
+
+in_ccdf_time <- get_ccdf(spendtime_w2, mode = 'in')
+out_ccdf_time <- get_ccdf(spendtime_w2, mode='out')
+
+in_ccdf_bf <- get_ccdf(bestfriend_w2, mode = 'in')
+out_ccdf_bf <- get_ccdf(bestfriend_w2, mode='out')
+
+in_ccdf_conf <- get_ccdf(conflict_w2, mode = 'in')
+out_ccdf_conf <- get_ccdf(conflict_w2, mode='out')
+```
+
+```{r}
+par(mar = c(5,5,5,1))
+par(mfrow=c(1,2))
+#plot(in_ccdf_time$ccdf ~ in_ccdf_time$degree, xlab='Indegree d', ylab='Complementary CDF P(X>=d)', log='xy',col='green',type = 'b')
+plot(in_ccdf_time$ccdf ~ in_ccdf_time$degree, xlab='Indegree d', ylab='Complementary CDF P(X>=d)',col='green',type = 'b', xlim=c(0,25),ylim=c(0, 1))
+points(in_ccdf_bf$ccdf ~ in_ccdf_bf$degree, col='blue', type = 'b')
+points(in_ccdf_conf$ccdf ~ in_ccdf_conf$degree, col='red', type = 'b')
+
+par(mar = c(5,5,5,5))
+plot(out_ccdf_time$ccdf ~ out_ccdf_time$degree, xlab='Outdegree d', ylab='Complementary CDF P(X>=d)', col='green',type = 'b', xlim=c(0,10),ylim=c(0, 1))
+points(out_ccdf_bf$ccdf ~ out_ccdf_bf$degree, col='blue',type = 'b')
+points(out_ccdf_conf$ccdf ~ out_ccdf_conf$degree, col='red', type = 'b')
+
+
+par(xpd=TRUE)
+legend("topright",
+       inset = c(-0.6, 0.1),
+       legend = c("Spent Time","Best Friend", "Conflict"),
+       col = c("green","blue","red"),
+       pch = 19,
+       cex = 0.7,
+       title = "Network")
+```
+Adding colours
+```{r Adding colours}
+#require(igraph)
+#require(intergraph)
+col_grade <- data.frame(Grade = unique(meta_df$GRC), stringsAsFactors = T)
+col_grade$col <- brewer_pal(palette = "Set2")(4)
+
+V(spendtime_w1)$col <- col_grade$col[match(V(spendtime_w1)$Grade, col_grade$Grade)]
+E(spendtime_w1)$col <- col_grade$col[match(tail_of(spendtime_w1,E(spendtime_w1))$Grade, col_grade$Grade)]
+
+V(spendtime_w2)$col <- col_grade$col[match(V(spendtime_w2)$Grade, col_grade$Grade)]
+E(spendtime_w2)$col <- col_grade$col[match(tail_of(spendtime_w2,E(spendtime_w2))$Grade, col_grade$Grade)]
+
+V(conflict_w1)$col <- col_grade$col[match(V(conflict_w1)$Grade, col_grade$Grade)]
+E(conflict_w1)$col <- col_grade$col[match(tail_of(conflict_w1,E(conflict_w1))$Grade, col_grade$Grade)]
+
+V(conflict_w2)$col <- col_grade$col[match(V(conflict_w2)$Grade, col_grade$Grade)]
+E(conflict_w2)$col <- col_grade$col[match(tail_of(conflict_w2,E(conflict_w2))$Grade, col_grade$Grade)]
+
+```
+
+Question 2
+```{r }
+
+pr1 <- page_rank(spendtime_w1)
+pr1 <- pr1$vector
+pr2 <- page_rank(spendtime_w2)
+pr2 <- pr2$vector
+pr1[is.na(pr1)]<-0
+pr2[is.na(pr2)]<-0
+i_deg_time1 <- i_deg(spendtime_w1)
+o_deg_time1 <- o_deg(spendtime_w1)
+deg_time1 <- deg(spendtime_w1)
+i_deg_time2 <- i_deg(spendtime_w2)
+o_deg_time2 <- o_deg(spendtime_w2)
+deg_time2 <- deg(spendtime_w2)
+
+clo1 <-igraph::closeness(conflict_w1)
+clo2 <- igraph::closeness(conflict_w2)
+clo1[is.na(clo1)]<-0
+clo2[is.na(clo2)]<-0
+i_deg_conf1 <- i_deg(conflict_w1)
+o_deg_conf1 <- o_deg(conflict_w1)
+deg_conf1 <- deg(conflict_w1)
+i_deg_conf2 <- i_deg(conflict_w2)
+o_deg_conf2 <- o_deg(conflict_w2)
+deg_conf2 <- deg(conflict_w2)
+
+
+spendtime1_df <- data.frame(
+  id = V(spendtime_w1)$name,
+  gender = V(spendtime_w1)$Gender,
+  grade = V(spendtime_w1)$Grade,
+  age = V(spendtime_w1)$Age,
+  deg = deg_time1,
+  i_deg = i_deg_time1,
+  o_deg = o_deg_time1,
+  deg = deg_time1,
+  pr = pr1
+)
+
+spendtime2_df <- data.frame(
+  id = V(spendtime_w2)$name,
+  gender = V(spendtime_w2)$Gender,
+  grade = V(spendtime_w2)$Grade,
+  age = V(spendtime_w2)$Age,
+  deg = deg_time2,
+  i_deg = i_deg_time2,
+  o_deg = o_deg_time2,
+  deg = deg_time2,
+  pr = pr2
+)
+
+
+conflict1_df <- data.frame(
+  id = V(conflict_w1)$name,
+  gender = V(conflict_w1)$Gender,
+  grade = V(conflict_w1)$Grade,
+  age = V(conflict_w1)$Age,
+  deg = deg_conf1,
+  i_deg = i_deg_conf1,
+  o_deg = o_deg_conf1,
+  deg = deg_conf1,
+  clo = clo1
+)
+
+conflict2_df <- data.frame(
+  id = V(conflict_w2)$name,
+  gender = V(conflict_w2)$Gender,
+  grade = V(conflict_w2)$Grade,
+  age = V(conflict_w2)$Age,
+  deg = deg_conf2,
+  i_deg = i_deg_conf2,
+  o_deg = o_deg_conf2,
+  deg = deg_conf2,
+  clo = clo2
+)
+#Table of the centrality measures
+
+V(spendtime_w1)$pr <- spendtime1_df$pr[match(V(spendtime_w1)$name, spendtime1_df$id)]
+V(spendtime_w2)$pr <- spendtime2_df$pr[match(V(spendtime_w2)$name, spendtime2_df$id)]
+V(conflict_w1)$clo <- conflict1_df$clo[match(V(conflict_w1)$name, conflict1_df$id)]
+V(conflict_w2)$clo <- conflict2_df$clo[match(V(conflict_w2)$name, conflict2_df$id)]
+
+#Generating top percentiles
+pr_971<- quantile(V(spendtime_w1)$pr, probs = 0.97,na.rm = TRUE)
+pr_972<- quantile(V(spendtime_w2)$pr, probs = 0.97,na.rm = TRUE)
+clo_951<- quantile(V(conflict_w1)$clo, probs = 0.95)
+clo_952<- quantile(V(conflict_w2)$clo, probs = 0.95)
+
+```
+```{r}
+set.seed(431)
+llayout <- layout_nicely(spendtime_w1)
+library(scales)
+#Plot two waves of spendtime - look at plotting examples in the homework to see if there are better ideas for this
+
+par(mar = c(1,1,4,1))
+par(mfrow=c(1,2)) 
+plot(spendtime_w1,
+     vertex.label = ifelse(V(spendtime_w1)$pr>pr_971,V(spendtime_w1)$name,NA),
+     vertex.size =  rescale(V(spendtime_w1)$pr,c(1,7)),
+     vertex.color = V(spendtime_w1)$col, #col as region fields in above section
+     vertex.label.cex = 0.5,
+     vertex.label.color = "white",
+     edge.arrow.size = 0.1,
+     edge.width = 0.7,
+     edge.curved = 0.5,
+     edge.color = E(spendtime_w1)$col,
+     layout = llayout)
+title("Wave 1",cex.main=1,col.main="black")
+
+plot(spendtime_w2,
+     vertex.label = ifelse(V(spendtime_w2)$pr>pr_972,V(spendtime_w2)$name,NA),
+     vertex.size =  rescale(V(spendtime_w2)$pr,c(1,7)),
+     vertex.color = V(spendtime_w2)$col, #col as region fields in above section
+     vertex.label.cex = 0.5,
+     vertex.label.color = "white",
+     edge.arrow.size = 0.1,
+     edge.width = 0.7,
+     edge.curved = 0.5,
+     edge.color = E(spendtime_w2)$col,
+     layout = llayout)
+title("Wave 2",cex.main=1,col.main="black")
+
+par(xpd=TRUE)
+
+legend("topright", 
+       inset = c(-0.06, 0.0),
+       legend = c("5th","6th","7th","8th"),
+       col = col_grade$col,
+       pch = 19,
+       cex = 0.7,
+       seg.len = 2,
+       title = "Grade")
+```
+
+```{r CONFLICT}
+set.seed(431)
+#Plot two waves of spendtime - look at plotting examples in the homework to see if there are better ideas for this
+
+par(mar = c(1,1,4,1))
+par(mfrow=c(1,2)) 
+plot(conflict_w1,
+     vertex.label = ifelse(V(conflict_w1)$clo>clo_951,V(conflict_w1)$name,NA),
+     vertex.size =  rescale(V(conflict_w1)$clo,c(2,7)),
+     vertex.color = V(conflict_w1)$col, #col as region fields in above section
+     vertex.label.cex = 0.5,
+     edge.arrow.size = 0.1,
+     vertex.label.color = "white",
+     edge.width = 0.7,
+     edge.curved = 0.5,
+     edge.color = E(conflict_w1)$col,
+     layout = llayout)
+title("Wave 1",cex.main=1,col.main="black")
+
+plot(conflict_w2,
+     vertex.label = ifelse(V(conflict_w2)$clo>clo_952,V(conflict_w2)$name,NA),
+     vertex.size =  rescale(V(conflict_w2)$clo,c(2,7)),
+     vertex.color = V(conflict_w2)$col, #col as region fields in above section
+     vertex.label.cex = 0.5,
+     vertex.label.color = "white",
+     edge.arrow.size = 0.1,
+     edge.width = 0.7,
+     edge.curved = 0.5,
+     edge.color = E(conflict_w2)$col,
+     layout = llayout)
+title("Wave 2",cex.main=1,col.main="black")
+
+par(xpd=TRUE)
+
+legend("topright", 
+       inset = c(-0.06, 0.0),
+       legend = c("5th","6th","7th","8th"),
+       col = col_grade$col,
+       pch = 19,
+       cex = 0.7,
+       seg.len = 2,
+       title = "Grade")
+```
+```{r Creating big df}
+spendtime_df <- data.frame(  id = V(spendtime_w2)$name,
+                             gender = V(spendtime_w2)$Gender,
+                             grade = V(spendtime_w2)$Grade,
+                             age = V(spendtime_w2)$Age,
+                             i_deg1 = i_deg_time1,
+                             pr1 = pr1,
+                             i_deg2 = i_deg_time2,
+                             pr2 = pr2)
+
+conflict_df <- data.frame(id = V(conflict_w1)$name,
+                            gender = V(conflict_w1)$Gender,
+                            grade = V(conflict_w1)$Grade,
+                            age = V(conflict_w1)$Age,
+                            i_deg1 = i_deg_conf1,
+                            clo1 = clo1,
+                            i_deg2 = i_deg_conf2,
+                            clo2 = clo2)
+
+timeconf_df <- data.frame(id = V(conflict_w1)$name,
+                          gender = V(conflict_w1)$Gender,
+                          grade = V(conflict_w1)$Grade,
+                          age = V(conflict_w1)$Age,
+                          conf_i_deg1 = i_deg_conf1,
+                          conf_clo1 = clo1,
+                          conf_i_deg2 = i_deg_conf2,
+                          conf_clo2 = clo2,
+                          time_i_deg1 = i_deg_time1,
+                          time_pr1 = pr1,
+                          time_i_deg2 = i_deg_time2,
+                          time_pr2 = pr2)
+
+spendtime_cor <- spendtime_df[,5:8]
+conflict_cor <- conflict_df[,5:8]
+timeconf_cor <- timeconf_df[,5:12]
+spendtime_cor_subset <- spendtime_df[spendtime_df$grade=='(3) 8th grade',5:8]
+cor(spendtime_cor_subset, method = "spearman")
+cor(spendtime_cor, method = "spearman")
+cor(conflict_cor, method = "spearman")
+cor(timeconf_cor, method = "spearman")
+cor(pr1, pr2, method="spearman")
+cor(clo1, clo2, method="spearman")
+
+cor(i_deg_time1, i_deg_time2, method="spearman")
+intersection(spendtime_w1, spendtime_w2)
+intersection(conflict_w1, conflict_w2)
+intersection(conflict_w1, spendtime_w1)
+
+cor(i_deg_time1, i_deg_time2, method="spearman")
+
+hist(i_deg_time1)
+hist(i_deg_time2)
+plot(i_deg_time1)
+
+```
+
+#Correlation between wave 1 and wave 2 measures, create dataframe with wave 1 and wave 2
+
+#Reciprocity? 7.	Are students' in- degree centrality measures consistent across relationships, and how might this change over time?
+
+#Correlation between spentime and conflict networks
+
+
+Question 3
+```{r}
+
+table(V(spendtime_w1)$Gender)
+table(V(spendtime_w1)$Grade)
+table(V(spendtime_w1)$Age)
+table(V(spendtime_w1)$Age,V(spendtime_w1)$Grade)
+table(V(spendtime_w1)$Gender,V(spendtime_w1)$Grade)
+
+#Spendtime Wave 1
+assort_gender_spendtime1 <- assortativity.nominal(spendtime_w1, as.factor(V(spendtime_w1)$Gender), directed = T)
+assort_grade_spendtime1 <- assortativity.nominal(spendtime_w1, as.factor(V(spendtime_w1)$Grade), directed = T)
+assort_age_spendtime1 <- assortativity.nominal(spendtime_w1, as.numeric(V(spendtime_w1)$Age), directed = T)
+
+#Spendtime Wave 2
+assort_gender_spendtime2 <- assortativity.nominal(spendtime_w2, as.factor(V(spendtime_w2)$Gender), directed = T)
+assort_grade_spendtime2 <- assortativity.nominal(spendtime_w2, as.factor(V(spendtime_w2)$Grade), directed = T)
+assort_age_spendtime2 <- assortativity.nominal(spendtime_w2, as.numeric(V(spendtime_w2)$Age), directed = T)
+
+#Best Friend Wave 1
+assort_gender_bf1 <- assortativity.nominal(bestfriend_w1, as.factor(V(bestfriend_w1)$Gender), directed = T)
+assort_grade_bf1 <- assortativity.nominal(bestfriend_w1, as.factor(V(bestfriend_w1)$Grade), directed = T)
+assort_age_bf1 <- assortativity.nominal(bestfriend_w1, as.numeric(V(bestfriend_w1)$Age), directed = T)
+
+#Best Friend Wave 2
+assort_gender_bf2 <- assortativity.nominal(bestfriend_w2, as.factor(V(bestfriend_w2)$Gender), directed = T)
+assort_grade_bf2 <- assortativity.nominal(bestfriend_w2, as.factor(V(bestfriend_w2)$Grade), directed = T)
+assort_age_bf2 <- assortativity.nominal(bestfriend_w2, as.numeric(V(bestfriend_w2)$Age), directed = T)
+
+#Conflict Wave 1
+assort_gender_conf1 <- assortativity.nominal(conflict_w1, as.factor(V(conflict_w1)$Gender), directed = T)
+assort_grade_conf1 <- assortativity.nominal(conflict_w1, as.factor(V(conflict_w1)$Grade), directed = T)
+assort_age_conf1 <- assortativity.nominal(conflict_w1, as.numeric(V(conflict_w1)$Age), directed = T)
+
+#Conflict Wave 2
+assort_gender_conf2 <- assortativity.nominal(conflict_w2, as.factor(V(conflict_w2)$Gender), directed = T)
+assort_grade_conf2 <- assortativity.nominal(conflict_w2, as.factor(V(conflict_w2)$Grade), directed = T)
+assort_age_conf2 <- assortativity.nominal(conflict_w2, as.numeric(V(conflict_w2)$Age), directed = T)
+
+#Create table with assortativity tables for all sources - determine the combination of tables by what I want to say
+
+assort_table <- data.frame(c('Spendtime Wave1', 'Spendtime Wave 2', 'Bestfriend Wave 1', 'Bestfriend Wave 2', 'Conflict Wave 1', 'Conflict Wave 2'),
+                           c(assort_gender_spendtime1, assort_gender_spendtime2, assort_gender_bf1, assort_gender_bf2, assort_gender_conf1, assort_gender_conf2),
+                           c(assort_grade_spendtime1, assort_grade_spendtime2, assort_grade_bf1, assort_grade_bf2, assort_grade_conf1, assort_grade_conf2),
+                           c(assort_age_spendtime1, assort_age_spendtime2, assort_age_bf1, assort_age_bf2, assort_age_conf1, assort_age_conf2))
+colnames(assort_table) <- c('Network and Wave','Assortativity by Gender','Assortativity by Grade','Assortativity by Age')
+assort_table
+```
+Consider if some communities are more assortative than others - what the spread is of each. Age
+Commnities and removing isolates
+```{r}
+
+spendtime_w2_nogaps <- igraph::delete.vertices(spendtime_w2, which(igraph::degree(spendtime_w2) == 0))
+conflict_w2_nogaps <- igraph::delete.vertices(conflict_w2, which(igraph::degree(conflict_w2) == 0))
+
+set.seed(401)
+spendtime2_clust <- cluster_leading_eigen(spendtime_w2_nogaps)
+conflict2_clust <- cluster_leading_eigen(conflict_w2_nogaps)
+
+llayout_spend <- layout_nicely(spendtime_w2_nogaps)
+llayout_conf <- layout_nicely(conflict_w2_nogaps)
+
+eig <- eigen_centrality(spendtime_w2_nogaps, directed = TRUE)
+V(spendtime_w2_nogaps)$eig <- eig$vector
+
+eig <- eigen_centrality(conflict_w2_nogaps, directed = TRUE)
+V(conflict_w2_nogaps)$eig <- eig$vector
+
+split(spendtime2_clust$names, spendtime2_clust$membership) ## prints full set of communities and their members
+split(conflict2_clust$names, conflict2_clust$membership)
+```
+```{r}
+col_membership_time <- data.frame(membership = unique(spendtime2_clust$membership), stringsAsFactors = T)
+col_membership_time$col <- brewer_pal(palette = "Set2")(5)
+
+col_membership_conf <- data.frame(membership = unique(conflict2_clust$membership), stringsAsFactors = T)
+col_membership_conf$col <- brewer_pal(palette = "Set3")(12)
+
+V(net_5pub)$col <- col_region$col[match(V(net_5pub)$Region, col_region$Region)]
+E(net_5pub)$col <- col_region$col[match(tail_of(net_5pub,E(net_5pub))$Region, col_region$Region)]
+
+V(spendtime_w2_nogaps)$membership <-  spendtime2_clust$membership[match(V(spendtime_w2_nogaps)$name, spendtime2_clust$names)]
+V(spendtime_w2_nogaps)$col <-col_membership_time$col[match(V(spendtime_w2_nogaps)$membership, col_membership_time$membership)]
+E(spendtime_w2_nogaps)$col <- col_membership_time$col[match(tail_of(spendtime_w2_nogaps,E(spendtime_w2_nogaps))$membership, col_membership_time$membership)]
+
+V(conflict_w2_nogaps)$membership <- conflict2_clust$membership[match(V(conflict_w2_nogaps)$name, conflict2_clust$names)]
+V(conflict_w2_nogaps)$col <-col_membership_conf$col[match(V(conflict_w2_nogaps)$membership, col_membership_conf$membership)]
+E(conflict_w2_nogaps)$col <- col_membership_conf$col[match(tail_of(conflict_w2_nogaps,E(conflict_w2_nogaps))$membership, col_membership_conf$membership)]
+
+
+```
+```{r}
+plot(spendtime_w2_nogaps, 
+     vertex.size = rescale(V(spendtime_w2_nogaps)$eig,c(3,5)), 
+     vertex.color = V(spendtime_w2_nogaps)$col, 
+     vertex.label = NA,
+     edge.arrow.size = 0.1, 
+     edge.curved = TRUE, 
+     edge.color = E(spendtime_w2_nogaps)$col,
+     edge.width = 1,
+     layout = llayout_spend
+    # main = "Spend Time Wave 2, Coloured by Eigencluster"
+    )
+
+legend("topright",
+       title = "Eigenclusters", 
+       legend = c(1:5),
+       pch = 19,
+       cex = 0.7,
+       seg.len = 2,
+       col = col_membership_time$col)
+
+
+plot(conflict_w2_nogaps, 
+     vertex.size = rescale(V(conflict_w2_nogaps)$eig,c(2,5)), 
+     vertex.color = V(conflict_w2_nogaps)$col, 
+     vertex.label = NA,
+     edge.arrow.size = 0.1, 
+     edge.curved = TRUE, 
+     edge.color = E(conflict_w2_nogaps)$col,
+     edge.width = 1,
+     layout = llayout_conf
+     #main = "Conflict Wave 2, Coloured by Eigencluster"
+     )
+
+legend("topright",
+       title = "Eigenclusters", 
+       legend = c(1:12),
+       pch = 19,
+       cex = 0.7,
+       seg.len = 2,
+       col = col_membership_conf$col)
+```
+
+```{r}
+table(V(spendtime_w2_nogaps)$Gender, membership(spendtime2_clust))
+table(V(spendtime_w2_nogaps)$Grade, membership(spendtime2_clust))
+table(V(spendtime_w2_nogaps)$Age, membership(spendtime2_clust))
+
+table(V(conflict_w2_nogaps)$Gender, membership(conflict2_clust))
+table(V(conflict_w2_nogaps)$Grade, membership(conflict2_clust))
+table(V(conflict_w2_nogaps)$Age, membership(conflict2_clust))
+
+compare(membership(spendtime2_clust), V(spendtime_w2_nogaps)$Gender, method = "nmi")
+compare(membership(spendtime2_clust), V(spendtime_w2_nogaps)$Grade, method = "nmi")
+compare(membership(spendtime2_clust), V(spendtime_w2_nogaps)$Age, method = "nmi")
+
+compare(membership(conflict2_clust), V(conflict_w2_nogaps)$Gender, method = "nmi")
+compare(membership(conflict2_clust), V(conflict_w2_nogaps)$Grade, method = "nmi")
+compare(membership(conflict2_clust), V(conflict_w2_nogaps)$Age, method = "nmi")
+```
+
+
+Question 4 - maybe update this slightly as this is pretty much exactly from the homework
+```{r Question 4}
+require(igraph)
+library("intergraph")
+require(intergraph)
+
+spendtime_w2 <- intergraph::asNetwork(spendtime_w2)
+bestfriend_w2 <- intergraph::asNetwork(bestfriend_w2)
+conflict_w2 <- intergraph::asNetwork(conflict_w2)
+spendtime_w1 <- intergraph::asNetwork(spendtime_w1)
+
+detach(package:igraph)
+library("ergm")
+require(ergm)
+require(sna)
+
+ergm1 <- ergm(formula = spendtime_w2 ~ edges
+              + nodematch("Gender")
+              + nodefactor("Gender")
+              + nodematch("Grade")
+              + nodefactor("Grade")
+              + edgecov(bestfriend_w2)
+              + edgecov(conflict_w2)
+              + mutual)
+
+summary(ergm1)
+
+knitr::kable(coef(summary(ergm1)))
+```
+Creating vector of model results from prompt
+```{r}
+prompt_ergm_coeff <- data.frame(c("edges","nodematch.Gender","nodematch.Gender.(1) Boy", "nodematch.Grade", "nodefactor.Grade.(1) 6th Grade","nodefactor.Grade.(2) 7th Grade","nodefactor.Grade.(3) 8th Grade","edgecov.bestfriend_w2","edgecov.conflict_w2","mutual"),
+                                c(-6.56842, 0.88070, -0.03562, 2.47710, 0.03551, 0.02145, 0.07379,5.48828,0.94391,2.92381),
+                                c(0.07561, 0.04600, 0.2270, 0.06051, 0.03074, 0.02767, 0.02801, 0.17830, 0.14187, 0.07394))
+colnames(prompt_ergm_coeff) <- c("Metric","Coefficient","Std. Error")
+
+prompt_or<- exp(prompt_ergm_coeff$Coefficient)
+ste <- prompt_ergm_coeff$`Std. Error`
+lci <- exp(prompt_ergm_coeff$Coefficient - 1.96 * ste)
+uci <- exp(prompt_ergm_coeff$Coefficient+ 1.96 * ste)
+oddsratios <- cbind(round(lci, digits = 4), 
+                    round(prompt_or, digits = 4), 
+                    round(uci, digits = 4))
+colnames(oddsratios) <- c("Lower","OR","Upper")
+oddsratios
+```
+
+```{r}
+AIC(ergm1)[1]
+BIC(ergm1)[1]
+```
+```{r}
+goftest1 <- gof(ergm1)
+plot(goftest1)
+```
+USING OUR MODEL
+```{r}
+mcmc.diagnostics(ergm1)
+```
+```{r Odds ratio for each}
+or <- exp(coef(ergm1)) ## the odds ratio for each term. Always remember what the relevant comparison is to!
+ste <- sqrt(diag(ergm1$covar))
+lci <- exp(coef(ergm1) - 1.96 * ste)
+uci <- exp(coef(ergm1) + 1.96 * ste)
+oddsratios <- cbind(round(lci, digits = 4), round(or, digits = 4), round(uci, digits = 4))
+colnames(oddsratios) <- c("Lower","OR","Upper")
+knitr::kable(oddsratios)
+```
+
+### 3. Report the expected probability of a tie between two lawyers with the following characteristics: 
+1. 𝑖 is a girl and 𝑗 is a boy, both are in 7th grade, neither named the other as a ‘best friend’ or as
+someone with whom they have conflict, and 𝑗 did not name 𝑖 as someone with whom they
+spend time
+2. 𝑖 is a girl and 𝑗 is a boy, both are in 7th grade, neither named the other as a ‘best friend’
+, 𝑖named 𝑗 as someone with whom they have conflict, and 𝑗 did not name 𝑖 as someone with whom they spend time.(difference in edgecov(conflict_w2))
+3. 𝑖 is a girl and 𝑗 is a boy, both are in 7th grade, 𝑖 named 𝑗 as a ‘best friend’, neither named the other as someone with whom they have conflict, and 𝑗 did not name 𝑖 as someone with whom they spend time. (difference in edgecov(bestfriend_w2))
+4.𝑖 is a girl and 𝑗 is a boy, both are in 7th grade, 𝑖 named 𝑗 as a ‘best friend’, neither named the
+other as someone with whom they have conflict, and 𝑗 named 𝑖 as someone with whom they spend time.
+
+
+ergm1 <- ergm(formula = spendtime_w2 ~ edges
+              + nodematch("Gender")
+              + nodefactor("Gender")
+              + nodematch("Grade")
+              + nodefactor("Grade")
+              + edgecov(bestfriend_w2)
+              + edgecov(conflict_w2)
+              + mutual)
+```{r}
+
+e1 <- c(1, 0, 1, 1, 0, 2, 0, 0, 0, 0) # (1) edges term, not matching gender, nodefactor of 1 as one is a boy, matching grade, nodefactor of 0 as both 7th graders, nodefactor of 2 as both 7th graders, nodefactor of 0 as both 7th graders, not listed as bf, not listed as conflict, not mutual
+e2 <- c(1, 0, 1, 1, 0, 2, 0, 0, 1, 0) # (2) as above but now 1 for conflict (don't know if j named i as conflict, but will assume only 1)
+e3<- c(1, 0, 1, 1, 0, 2, 0, 1, 0, 0) # (3) as above but now 1 for bestfriend (don't know if j named i as bestfriend as well, but will assume only 1)
+e4 <- c(1, 0, 1, 1, 0, 2, 0, 1, 0, 1) # (4) as above but now 1 for mutual
+
+estoprob <- function(logit) {
+  exp(logit)/(1+exp(logit))
+}
+
+estoprob(sum(e1*(prompt_ergm_coeff$Coefficient)))*100
+estoprob(sum(e2*(prompt_ergm_coeff$Coefficient)))
+estoprob(sum(e3*(prompt_ergm_coeff$Coefficient)))
+estoprob(sum(e4*(prompt_ergm_coeff$Coefficient)))
+
+estoprob(sum(e1*(coef(ergm1))))
+estoprob(sum(e2_a*(coef(ergm1))))
+estoprob(sum(e2_b*(coef(ergm1))))
+estoprob(sum(e3_a*(coef(ergm1))))
+estoprob(sum(e3_b*(coef(ergm1))))
+estoprob(sum(e4*(coef(ergm1))))
+
+
+```
+
+New model with 2 new terms
+
+``` {r}
+ergm2 <- ergm(formula = spendtime_w2 ~ edges
+              + nodematch("Gender")
+              + nodefactor("Gender")
+              + nodematch("Grade")
+              + nodefactor("Grade")
+              + edgecov(bestfriend_w2)
+              + edgecov(conflict_w2)
+              + mutual
+              + nodematch("Age")
+              + edgecov(spendtime_w1))
+
+summary(ergm2)
+
+knitr::kable(coef(summary(ergm2)))
+```
+
+```{r}
+AIC(ergm2)[1]
+BIC(ergm2)[1]
+```
+```{r}
+goftest2 <- gof(ergm2)
+plot(goftest2)
+```
+```{r}
+screenreg(list(ergm1,ergm2))
+```
+
+APPENDIX
+```{r}
+#Random network models
+require("igraph")
+
+spendtime_w2 <- graph_from_data_frame(spendtime_w2)
+bestfriend_w2 <- graph_from_data_frame(bestfriend_w2)
+
+#FIRST FOR SPEND TIME MODEL
+#Erdős–Rényi model
+link_ran_er_time <- lapply(rep(1, 100), function(x)
+  sample_gnp(n=vcount(spendtime_w2), p=edge_density(spendtime_w2)))
+
+link_ran_apl_er_time <- sapply(link_ran_er_time, mean_distance)
+link_ran_acc_er_time <- sapply(link_ran_er_time, transitivity)
+
+#Configuration model
+ran_link_con_time <- lapply(rep(1, 100), function(x)
+  sample_degseq(out.deg = degree(spendtime_w2, mode='out'), in.deg = degree(spendtime_w2,mode="in"), method = "simple"))
+
+link_ran_apl_con_time <- sapply(ran_link_con_time, mean_distance)
+
+link_ran_acc_con_time <- sapply(ran_link_con_time, transitivity)
+link_ran_acc_con_time <- sapply(ran_link_con_time, reciprocity)
+mean(link_ran_acc_con_time)
+
+ran_link_pref_time <- lapply(rep(1,100), function(x)
+  sample_pa(n=vcount(spendtime_w2), m=mean_deg_time, directed=TRUE, out.pref=TRUE))
+link_ran_apl_pref_time <- sapply(ran_link_pref_time, mean_distance)
+link_ran_acc_pref_time <- sapply(ran_link_pref_time, transitivity)
+
+
+res_table_time <- data.frame(c('Erdős–Rényi', 'Configuration model', 'Preferential attachment model', 'Spend Time'), 
+                        c(mean(link_ran_apl_er_time), mean(link_ran_apl_con_time), mean(link_ran_apl_pref_time), mean_distance(spendtime_w2)), 
+                        c(mean(link_ran_acc_er_time), mean(link_ran_acc_con_time), mean(link_ran_acc_pref_time), transitivity(spendtime_w2)))
+colnames(res_table_time) <- c('Name', 'Average path length', 'Transitivity')
+res_table_time
+
+#SECOND FOR BF TIME MODEL
+#Erdős–Rényi model
+link_ran_er_bf <- lapply(rep(1, 100), function(x)
+  sample_gnp(n=vcount(bestfriend_w2), p=edge_density(bestfriend_w2)))
+
+link_ran_apl_er_bf <- sapply(link_ran_er_bf, mean_distance)
+link_ran_acc_er_bf <- sapply(link_ran_er_bf, transitivity)
+
+#Configuration model
+ran_link_con_bf <- lapply(rep(1, 100), function(x)
+  sample_degseq(out.deg = o_deg_bf, in.deg = i_deg_bf, method = "simple"))
+
+link_ran_apl_con_bf <- sapply(ran_link_con_bf, mean_distance)
+link_ran_acc_con_bf <- sapply(ran_link_con_bf, transitivity)
+
+ran_link_pref_bf <- lapply(rep(1,100), function(x)
+  sample_pa(n=vcount(bestfriend_w2), m=mean_deg_bf, directed=TRUE, out.pref=TRUE))
+
+link_ran_apl_pref_bf <- sapply(ran_link_pref_bf, mean_distance)
+link_ran_acc_pref_bf <- sapply(ran_link_pref_bf, transitivity)
+
+
+res_table_time <- data.frame(c('Erdős–Rényi', 'Configuration model', 'Preferential attachment model', 'Best friend'), 
+                             c(mean(link_ran_apl_er_bf), mean(link_ran_apl_con_bf), mean(link_ran_apl_pref_bf), mean_distance(bestfriend_w2)), 
+                             c(mean(link_ran_acc_er_bf), mean(link_ran_acc_con_bf), mean(link_ran_acc_pref_bf), transitivity(bestfriend_w2)))
+colnames(res_table_time) <- c('Name', 'Average path length', 'Transitivity')
+res_table_time
+```
